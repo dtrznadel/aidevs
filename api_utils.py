@@ -1,8 +1,10 @@
+
 import json
 import os
 import requests
 
 from dotenv import load_dotenv
+from serpapi import GoogleSearch
 
 load_dotenv()
 
