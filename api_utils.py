@@ -57,3 +57,34 @@ def call_openai_function(messages, tools):
     for tool_call in response.choices[0].message.tool_calls:
         result.append(tool_call.function)
     return result
+
+def openai_vision(message):
+    """
+        Call GPT 4V model.
+        :message: Message is in ChatML (Chat Markup Language) syntax.
+        Sample input syntax:
+        [
+        {
+            "role": "system",
+            "content": [{"type": "text", "text": "you are helpful assistant"}],
+        },
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Describe the image below."},
+                {
+                    "type": "image_url",
+                    "image_url": *your url*,
+                },
+            ],
+        },
+    ]
+    :returns: model response content.
+
+    """
+    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    response = client.chat.completions.create(
+        model="gpt-4-vision-preview", messages=message, max_tokens=200
+    )
+    return response.choices[0].message.content
+
