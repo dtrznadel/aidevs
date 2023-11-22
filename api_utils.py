@@ -88,3 +88,27 @@ def openai_vision(message):
     )
     return response.choices[0].message.content
 
+def generate_meme(template_name, text, picture_link, output_file_name):
+    """
+    This method returns link to meme based on provided text and link to picture.
+    Example: generate_meme("fancy-squirrels-hang-yearly-1157", "Gdy szef pyta, kto chętny na sobotni release.","https://a.pinatafarm.com/1210x799/bb90789ee7/puppet-monkey-looking-away.jpg", "my_meme")
+    """
+    host = "https://api.renderform.io/"
+    endpoint = "api/v2/render"
+    url = host + endpoint
+    headers = {
+        "x-api-key": f"{os.getenv('RENDER_FORM_API_KEY')}",
+        "Content-Type": "application/json",
+    }
+    request_body = json.dumps(
+        {
+            "template": template_name,
+            "data": {
+                "title.text": text,
+                "image.src": picture_link,
+            },
+            "fileName": output_file_name,
+        }
+    )
+    response = requests.post(headers=headers, url=url, data=request_body)
+    return response.json()["href"]
