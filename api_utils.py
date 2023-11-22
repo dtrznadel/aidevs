@@ -112,3 +112,19 @@ def generate_meme(template_name, text, picture_link, output_file_name):
     )
     response = requests.post(headers=headers, url=url, data=request_body)
     return response.json()["href"]
+
+def serpapi(query):
+    """
+    retrieves first snippet from serp api query to google.
+    Example:
+    serpapi("Who is tallest man in the world?")
+    """
+    params = {
+        "engine": "google",
+        "q": query,
+        "api_key": os.getenv("SERP_API_KEY"),
+    }
+    search = GoogleSearch(params)
+    results = search.get_dict()
+    organic_results = results["organic_results"]
+    return organic_results[0]["snippet"]
