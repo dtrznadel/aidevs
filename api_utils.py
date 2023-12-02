@@ -9,6 +9,38 @@ from serpapi import GoogleSearch
 
 load_dotenv()
 
+def get_openai_header(content_type="application/json"):
+    return {
+        "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
+        "Content-Type": content_type,
+    }
+
+def openai_completions(
+    model="gpt-3.5-turbo",
+    message=[],
+    include_history=False,
+    previous_messages=False,
+):
+    if previous_messages:
+        messages = previous_messages + message
+    else:
+        messages = message
+    request_body = json.dumps({"messages": messages, "model": model})
+    full_response = requests.post(
+        headers=get_openai_header(),
+        url=TasksApiConfig.openai_hostname + "chat/completions",
+        data=request_body,
+    )
+    if full_response.status_code == 200:
+        assistant_response = full_response.json()["choices"][0]["message"]
+        if include_history:
+            result = messages + [assistant_response]
+        else:
+            result = assistant_response["content"]
+    else:
+        result = full_response.json()
+    return result
+
 def restcountries(country, fields=[]):
     """
     retrieves information about specific country
