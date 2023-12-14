@@ -7,6 +7,9 @@ from dotenv import load_dotenv
 from pathlib import Path
 from serpapi import GoogleSearch
 
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
 
 from ai_config import TasksApiConfig
 
@@ -27,11 +30,127 @@ def categorization(user):
     return simple_openai_completion(system, user)
 
 
+def check_google_photos_token():
+    SCOPES = [
+        "https://www.googleapis.com/auth/photoslibrary",
+    ]
+    creds = None
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists("token.json"):
+        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                "google_python_project_API.json",
+                SCOPES,
+            )
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open("token.json", "w") as token:
+            token.write(creds.to_json())
+
+
 def get_openai_header(content_type="application/json"):
     return {
         "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
         "Content-Type": content_type,
     }
+
+
+def get_photo_ids_based_on_date_range(start_date, end_date, pageSize=10):
+    """
+    Sample usage:
+        get_photo_ids_based_on_date_range(
+            start_date="2023-11-05", end_date="2023-11-06", pageSize=2
+        )
+    """
+    check_google_photos_token()
+    with open("google_python_project_API.json") as secret:
+        data = json.load(secret)
+        oAuthclientID = data["installed"]["client_id"]
+        oAuthclientSecret = data["installed"]["client_secret"]
+        oAuthrefreshToken = data["installed"]["token_uri"]
+        oAuthrefreshToken = data["installed"]["token_uri"]
+
+    token = None
+    with open("token.json") as secret:
+        data = json.load(secret)
+        token = data["token"]
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    hostname = TasksApiConfig.google_api_hostname
+    search_path = "mediaItems:search"
+    url = hostname + search_path
+    body = {
+        "pageSize": pageSize,
+        "filters": {
+            "dateFilter": {
+                "ranges": [
+                    {
+                        "startDate": {
+                            "year": int(start_date.split("-")[0]),
+                            "month": int(start_date.split("-")[1]),
+                            "day": int(start_date.split("-")[2]),
+                        },
+                        "endDate": {
+                            "year": int(end_date.split("-")[0]),
+                            "month": int(end_date.split("-")[1]),
+                            "day": int(end_date.split("-")[2]),
+                        },
+                    }
+                ]
+            }
+        },
+    }
+    response = requests.post(url=url, headers=headers, json=body)
+    if response.status_code != 200:
+        return print(
+            "Request failed. Status_code: "
+            + response.status_code
+            + ". Content: "
+            + response.content
+        )
+    else:
+        results = response.json().get("mediaItems", [])
+        sorted_results = sorted(
+            results, key=lambda k: k["mediaMetadata"]["creationTime"]
+        )
+        ids = []
+        for result in sorted_results:
+            ids.append(result["id"])
+    return ids
+
+
+def find_photo_google_details_based_on_id(photo_id):
+    """
+        sample usage
+    find_photo_google_details_based_on_id(
+    "AD9e7BBrkyA6SIMNkeXcS3dg3musegAntCuo3cEwuR7HDMjrQuiHRtBI3B2zxkJugi5PRYJicl8jxhpA0nRPlqhbqtVOvoVZjw"
+    )
+    """
+    hostname = TasksApiConfig.google_api_hostname
+    search_path = "mediaItems"
+    with open("token.json") as secret:
+        data = json.load(secret)
+        token = data["token"]
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    response = requests.get(
+        url=hostname + search_path + "/" + photo_id, headers=headers
+    )
+    results = response.json()
+    return results
 
 
 def openai_completions(

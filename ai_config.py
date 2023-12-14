@@ -13,3 +13,4 @@ class TasksApiConfig:
     default_recording_path = (
         "C:\\Users\\Dominik Trznadel\\OneDrive\Dokumenty\\Nagrania dźwiękowe\\"
     )
+    google_api_hostname = "https://photoslibrary.googleapis.com/v1/"
