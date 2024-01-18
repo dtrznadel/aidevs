@@ -14,8 +14,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from ai_config import TasksApiConfig
 
 load_dotenv()
-openai_clinent = OpenAI()
-openai_clinent.api_key = os.getenv("OPENAI_API_KEY")
+openai_client = OpenAI()
+openai_client.api_key = os.getenv("OPENAI_API_KEY")
 
 
 def categorization(user):
@@ -224,8 +224,7 @@ def call_openai_function(messages, tools):
     potential further transformation to extract arguments to the first called function:
     json.loads(ai_function[0].arguments.encode("utf-8").decode("unicode_escape"))
     """
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-    response = openai.chat.completions.create(
+    response = openai_client.chat.completions.create(
         model="gpt-3.5-turbo-1106",
         messages=messages,
         tools=tools,
@@ -254,7 +253,7 @@ def openai_transcriptions(
     write_to_txt=False,
     target_file_name="transkrypcja",
 ):
-    result = openai_clinent.audio.transcriptions.create(
+    result = openai_client.audio.transcriptions.create(
         model=model,
         file=open(path_to_file, "rb"),
         response_format="text",
@@ -290,15 +289,14 @@ def openai_vision(message):
     :returns: model response content.
 
     """
-    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    response = client.chat.completions.create(
+    response = openai_client.chat.completions.create(
         model="gpt-4-vision-preview", messages=message, max_tokens=200
     )
     return response.choices[0].message.content
 
 
 def speech_generation(input):
-    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    client = openai_client.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     speech_file_path = Path(__file__).parent / "speech.mp3"
     response = client.audio.speech.create(
         model="tts-1",
