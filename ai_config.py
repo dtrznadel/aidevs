@@ -5,6 +5,9 @@ class TasksApiConfig:
     endpoint = "https://zadania.aidevs.pl"
     task_hostname = "https://zadania.aidevs.pl"
 
+    server_path = "azyl.ag3nts.org"
+    server_ssh_port = 5022
+
     task_name = "scraper"
 
     openai_hostname = "https://api.openai.com/v1/"
