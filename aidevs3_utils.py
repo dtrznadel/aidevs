@@ -2,6 +2,7 @@ import requests
 import json
 import os
 
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -24,6 +25,11 @@ class AIDevs3Utils:
         response = requests.get(url)
         response.raise_for_status()
         return response.text
+
+    def retrieve_from_html(html_content, id):
+        soup = BeautifulSoup(html_content, "html.parser")
+        question_element = soup.find(id=id)
+        return question_element.text.strip()
 
     def verify_results(task, answer):
         url = "https://poligon.aidevs.pl/verify"

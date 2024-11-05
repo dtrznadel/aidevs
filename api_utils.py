@@ -9,7 +9,6 @@ from serpapi import GoogleSearch
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 
 from ai_config import TasksApiConfig
 
@@ -343,7 +342,7 @@ def save_file_from_the_web(url, format, filename, path=""):
         f.write(response.content)
 
 
-def simple_openai_completion(system, user, model="gpt-3.5-turbo"):
+def simple_openai_completion(system, user, model="gpt-4o"):
     message = [
         {"role": "system", "content": system},
         {
