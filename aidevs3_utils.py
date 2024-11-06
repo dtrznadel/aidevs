@@ -31,10 +31,9 @@ class AIDevs3Utils:
         question_element = soup.find(id=id)
         return question_element.text.strip()
 
-    def verify_results(task, answer):
-        url = "https://poligon.aidevs.pl/verify"
+    def verify_results(task, answer, endpoint):
         payload = {"task": task, "apikey": aidevs3_api_key, "answer": answer}
-        response = requests.post(url, json=payload)
+        response = requests.post(endpoint, json=payload)
         response.raise_for_status()
         return response.json()
 
