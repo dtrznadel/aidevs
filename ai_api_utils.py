@@ -5,10 +5,16 @@ import requests
 from dotenv import load_dotenv
 from pathlib import Path
 from ai_config import TasksApiConfig
+import vertexai
+
+from vertexai.generative_models import GenerativeModel
+from vertexai.preview.generative_models import GenerativeModel, Part
+import mimetypes
 
 load_dotenv()
 openai_client = OpenAI()
 openai_client.api_key = os.getenv("OPENAI_API_KEY")
+
 
 class AiApiUtils:
     @staticmethod
@@ -111,29 +117,34 @@ class AiApiUtils:
     @staticmethod
     def openai_vision(message):
         """
-        Call GPT 4V model.
+        Call gpt-4o model to analyze image.
         :message: Message is in ChatML (Chat Markup Language) syntax.
         Sample input syntax:
         [
-        {
-            "role": "system",
-            "content": [{"type": "text", "text": "you are helpful assistant"}],
-        },
-        {
-            "role": "user",
-            "content": [
-                {"type": "text", "text": "Describe the image below."},
-                {
-                    "type": "image_url",
-                    "image_url": *your url*,
-                },
-            ],
-        },
-    ]
-    :returns: model response content.
+            {
+                "role": "system",
+                "content": "you are helpful assistant"
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Describe the image below."
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "https://example.com/image.jpg"
+                        }
+                    }
+                ]
+            }
+        ]
+        :returns: model response content.
         """
         response = openai_client.chat.completions.create(
-            model="gpt-4-vision-preview", messages=message, max_tokens=200
+            model="gpt-4o", messages=message, max_tokens=200
         )
         return response.choices[0].message.content
 
@@ -142,7 +153,7 @@ class AiApiUtils:
         """
         This method generates speech from text and saves it as speech.mp3 file.
         Example:
-        
+
         :arg input: text to be converted to speech.
         :returns: "speech.mp3 file written"
         """
@@ -169,3 +180,104 @@ class AiApiUtils:
             message=message,
             include_history=False,
         )
+
+    @staticmethod
+    def generate_image(
+        prompt, 
+        model="dall-e-3", 
+        size="1024x1024", 
+        quality="standard", 
+        filename="image.jpg"
+    ):
+        """
+        Generates an image using DALL-E 3 based on the provided prompt and saves it locally.
+        
+        Args:
+            prompt (str): The description of the image to generate
+            model (str): The model to use (default: "dall-e-3")
+            size (str): Image size - "1024x1024", "1792x1024", or "1024x1792" (default: "1024x1024")
+            quality (str): "standard" or "hd" (default: "standard")
+            filename (str): Name of the output file (default: "image.jpg")
+            
+        Returns:
+            str: Path to the saved image
+            
+        Example:
+            prompt = "A serene lake at sunset with mountains in the background"
+            image_path = AiApiUtils.generate_image(
+                prompt=prompt,
+                size="1792x1024",
+                quality="hd",
+                filename="sunset_lake.jpg"
+            )
+        """
+        response = openai_client.images.generate(
+            model=model,
+            prompt=prompt,
+            size=size,
+            quality=quality,
+            n=1,
+        )
+        
+        # Get the image URL from the response
+        image_url = response.data[0].url
+        
+        # Download and save the image
+        image_response = requests.get(image_url)
+        if image_response.status_code == 200:
+            with open(filename, 'wb') as f:
+                f.write(image_response.content)
+            return filename
+        else:
+            raise Exception(f"Failed to download image: {image_response.status_code}")
+        
+    @staticmethod
+    def vertex_ai_video_analysis(video_path):
+        """
+        Analyzes video content using Google's Vertex AI Gemini model.
+        
+        Args:
+            video_path (str): Path to the video file to analyze
+            
+        Returns:
+            str: Generated description/analysis of the video content
+            
+        Example:
+            # Analyze a local video file
+            video_analysis = AiApiUtils.vertex_ai_video_analysis(
+                video_path="2024-10-31 07-48-45.mkv"
+            )
+            print(video_analysis)  # Prints the AI-generated analysis of the video
+        
+        Note:
+            Requires VERTEX_PROJECT_ID in your .env file
+            Supports common video formats including .mkv, .mp4, .avi
+            Maximum video size is 32MB
+        """
+        # Get the MIME type of the video
+        PROJECT_ID = os.getenv("VERTEX_PROJECT_ID")
+        vertexai.init(project=PROJECT_ID, location="us-central1")
+        model = GenerativeModel("gemini-1.5-flash-002")
+        
+        mime_type, _ = mimetypes.guess_type(video_path)
+        if not mime_type:
+            mime_type = "video/mp4"  # default to mp4 if can't determine
+            
+        # Load the video file as a Part object
+        with open(video_path, "rb") as video_file:
+            video_data = video_file.read()
+            video_part = Part.from_data(data=video_data, mime_type=mime_type)
+        
+        # Create the prompt
+        prompt = "Please analyze this video and describe what's happening in it."
+        
+        # Generate content with both the prompt and video
+        response = model.generate_content(
+            [prompt, video_part],
+            generation_config={
+                "max_output_tokens": 2048,
+                "temperature": 0.4,
+            }
+        )
+        
+        return response.text
