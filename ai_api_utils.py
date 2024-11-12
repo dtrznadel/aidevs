@@ -17,6 +17,7 @@ openai_client.api_key = os.getenv("OPENAI_API_KEY")
 
 
 class AiApiUtils:
+    
     @staticmethod
     def categorization(user):
         system = (
@@ -110,7 +111,7 @@ class AiApiUtils:
             language=language,
         )
         if write_to_txt:
-            with open(f"{target_file_name}.txt", "w") as f:
+            with open(f"{target_file_name}.txt", "w", encoding='utf-8') as f:
                 f.write(result)
         return result
 
@@ -281,3 +282,75 @@ class AiApiUtils:
         )
         
         return response.text
+    @staticmethod
+    def ollama_list_local_models():
+        url = "http://localhost:11434/api/tags"
+        response = requests.get(url)
+        return response.json()
+    
+    @staticmethod
+    def ollama_call_model(model, prompt):
+        """
+        Example - censor
+        url = "http://localhost:11434/api/generate"
+        system_prompt = \"\"\"Analyze the following Python code and create a python list of all project-specific elements that need to be anonymized to make the code generic.
+        1. Class Names
+        2. Function Names
+        3. Variable Names
+        4. Constants/String Values
+        5. Path Names
+
+        Return python list of elements and nothing more.\"\"\"
+        user_prompt = content
+        payload = {
+            "model": "llama3.2",
+            "prompt": user_prompt,
+            "system": system_prompt,
+            "stream": False,
+        }
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(url, json=payload, headers=headers)
+        print(response.json()["response"])
+        """
+        url = f"http://localhost:11434/api/generate"
+        response = requests.post(url, json={"model": model, "prompt": prompt})
+        return response.json()["response"]
+    
+    @staticmethod
+    def structured_openai_completion(system, user, model="gpt-4o-2024-08-06"):
+        """
+        Get a structured JSON response from OpenAI based on a provided schema.
+        
+        Args:
+            system (str): System message/instructions
+            user (str): User input/query
+            response_schema (dict): JSON schema that defines the expected response structure
+            model (str): OpenAI model to use (default: gpt-3.5-turbo-1106)
+            
+        Returns:
+            dict: Structured response matching the provided schema
+            
+        Example:
+            schema = {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "age": {"type": "integer"}
+                }
+            }
+            response = AiApiUtils.structured_openai_completion(
+                system="Extract name and age from text",
+                user="John is 25 years old",
+                response_schema=schema
+            )
+        """
+        response = openai_client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user}
+            ],
+            response_format={"type": "json_object"},
+        )
+        
+        return json.loads(response.choices[0].message.content)
