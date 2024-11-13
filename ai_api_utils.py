@@ -145,7 +145,7 @@ class AiApiUtils:
         :returns: model response content.
         """
         response = openai_client.chat.completions.create(
-            model="gpt-4o", messages=message, max_tokens=200
+            model="gpt-4o", messages=message, max_tokens=800
         )
         return response.choices[0].message.content
 
@@ -188,6 +188,7 @@ class AiApiUtils:
         model="dall-e-3", 
         size="1024x1024", 
         quality="standard", 
+        save_image=True,
         filename="image.jpg"
     ):
         """
@@ -222,15 +223,17 @@ class AiApiUtils:
         
         # Get the image URL from the response
         image_url = response.data[0].url
-        
+        if save_image:
         # Download and save the image
-        image_response = requests.get(image_url)
-        if image_response.status_code == 200:
-            with open(filename, 'wb') as f:
-                f.write(image_response.content)
-            return filename
+            image_response = requests.get(image_url)
+            if image_response.status_code == 200:
+                with open(filename, 'wb') as f:
+                    f.write(image_response.content)
+                return filename
+            else:
+                raise Exception(f"Failed to download image: {image_response.status_code}")
         else:
-            raise Exception(f"Failed to download image: {image_response.status_code}")
+            return image_url
         
     @staticmethod
     def vertex_ai_video_analysis(video_path):
