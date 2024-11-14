@@ -4,6 +4,7 @@ import os
 import requests
 from dotenv import load_dotenv
 from pathlib import Path
+from pydantic import BaseModel
 from ai_config import TasksApiConfig
 import vertexai
 
@@ -116,18 +117,19 @@ class AiApiUtils:
         return result
 
     @staticmethod
-    def openai_vision(message):
+    def openai_vision(message, image_path=None):
         """
-        Call gpt-4o model to analyze image.
-        :message: Message is in ChatML (Chat Markup Language) syntax.
-        Sample input syntax:
+        Call gpt-4-vision-preview model to analyze image from URL or local file.
+        :param message: Message is in ChatML (Chat Markup Language) syntax.
+        :param image_path: Optional path to local image file. If provided, will encode and use local file instead of URL.
+        Sample input syntax for URL:
         [
             {
                 "role": "system",
                 "content": "you are helpful assistant"
             },
             {
-                "role": "user",
+                "role": "user", 
                 "content": [
                     {
                         "type": "text",
@@ -144,6 +146,22 @@ class AiApiUtils:
         ]
         :returns: model response content.
         """
+        if image_path:
+            # Convert local image to base64
+            with open(image_path, "rb") as image_file:
+                import base64
+                image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+                
+                # Replace/insert image content in message
+                for msg in message:
+                    if msg["role"] == "user":
+                        for content in msg["content"]:
+                            if content.get("type") == "image_url":
+                                content["type"] = "image_url"
+                                content["image_url"] = {
+                                    "url": f"data:image/jpeg;base64,{image_base64}"
+                                }
+
         response = openai_client.chat.completions.create(
             model="gpt-4o", messages=message, max_tokens=800
         )
@@ -320,7 +338,7 @@ class AiApiUtils:
         return response.json()["response"]
     
     @staticmethod
-    def structured_openai_completion(system, user, model="gpt-4o-2024-08-06"):
+    def structured_openai_completion(system, user, model="gpt-4o-2024-08-06", response_schema=None):
         """
         Get a structured JSON response from OpenAI based on a provided schema.
         
@@ -347,13 +365,25 @@ class AiApiUtils:
                 response_schema=schema
             )
         """
-        response = openai_client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user}
-            ],
-            response_format={"type": "json_object"},
-        )
+
+        if not response_schema:
+            response_schema = {"type": "json_object"}
+            response = openai_client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user}
+                ],
+                response_format=response_schema,
+            )
+        else:
+            response = openai_client.beta.chat.completions.parse(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user}
+                ],
+                response_format=response_schema,
+            )
         
         return json.loads(response.choices[0].message.content)
