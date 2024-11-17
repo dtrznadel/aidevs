@@ -18,9 +18,10 @@ PPLX_API_HEADER = {
 
 class PplxApi:
     def pplx_chat_completions(
-        model,
         system_message,
         user_message,
+        model="llama-3.1-70b-instruct",
+        temperature=0.2,
     ):
         url = PPLX_API_HOSTNAME
         payload = {
@@ -29,6 +30,7 @@ class PplxApi:
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": user_message},
             ],
+            "temperature": temperature,
         }
         response = requests.post(url=url, json=payload, headers=PPLX_API_HEADER)
         return response.json()["choices"][0]["message"]["content"]

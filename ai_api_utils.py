@@ -68,7 +68,7 @@ class AiApiUtils:
         return result
 
     @staticmethod
-    def call_openai_function(messages, tools):
+    def call_openai_function(messages, tools, temperature=0.2):
         """
         potential further transformation to extract arguments to the first called function:
         json.loads(ai_function[0].arguments.encode("utf-8").decode("unicode_escape"))
@@ -78,6 +78,7 @@ class AiApiUtils:
             messages=messages,
             tools=tools,
             tool_choice="auto",
+            temperature=temperature
         )
         result = []
         for tool_call in response.choices[0].message.tool_calls:
@@ -96,28 +97,59 @@ class AiApiUtils:
 
     @staticmethod
     def openai_transcriptions(
-        path_to_file,
-        language="en",
+        file_input,
+        language="en", 
         model="whisper-1",
         write_to_txt=False,
         target_file_name="transkrypcja",
+        temperature=0.05
     ):
         """
-        :arg path_to_file: path to the file to be transcribed.
+        Transcribe audio from a local file or URL.
+        
+        Args:
+            file_input: Path to local audio file or URL to audio file
+            language: Language code (e.g. "en")
+            model: Whisper model to use
+            write_to_txt: Whether to save transcription to text file
+            target_file_name: Name of output text file if write_to_txt is True
+            temperature: Model temperature parameter
         """
-        result = openai_client.audio.transcriptions.create(
-            model=model,
-            file=open(path_to_file, "rb"),
-            response_format="text",
-            language=language,
-        )
-        if write_to_txt:
-            with open(f"{target_file_name}.txt", "w", encoding='utf-8') as f:
-                f.write(result)
-        return result
+        if file_input.startswith(('http://', 'https://')):
+            # Download file from URL
+            response = requests.get(file_input)
+            audio_file = response.content
+            file_obj = open("temp_audio.mp3", "wb")
+            file_obj.write(audio_file)
+            file_obj.close()
+            file_obj = open("temp_audio.mp3", "rb")
+        else:
+            # Open local file
+            file_obj = open(file_input, "rb")
+
+        try:
+            result = openai_client.audio.transcriptions.create(
+                model=model,
+                file=file_obj,
+                response_format="text",
+                language=language,
+                temperature=temperature
+            )
+
+            if write_to_txt:
+                with open(f"{target_file_name}.txt", "w", encoding='utf-8') as f:
+                    f.write(result)
+
+            return result
+            
+        finally:
+            file_obj.close()
+            # Clean up temp file if it was created
+            if file_input.startswith(('http://', 'https://')):
+                os.remove("temp_audio.mp3")
 
     @staticmethod
-    def openai_vision(message, image_path=None):
+    def openai_vision(message, image_path=None, temperature=0.2):
         """
         Call gpt-4-vision-preview model to analyze image from URL or local file.
         :param message: Message is in ChatML (Chat Markup Language) syntax.
@@ -163,7 +195,7 @@ class AiApiUtils:
                                 }
 
         response = openai_client.chat.completions.create(
-            model="gpt-4o", messages=message, max_tokens=800
+            model="gpt-4o", messages=message, max_tokens=800, temperature=temperature
         )
         return response.choices[0].message.content
 
