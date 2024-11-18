@@ -76,3 +76,67 @@ class GeneralUtils:
 
         with open(f"{path}{filename}.{format}", "wb") as f:
             f.write(response.content)
+            
+    @staticmethod
+    def save_file(path, filename, extension, content):
+        """
+        Saves content to a file.
+        
+        Args:
+            path (str): Directory path
+            filename (str): Name of the file without extension
+            extension (str): File extension ('json' or 'txt')
+            content (Any): Content to save (dict/list for JSON, str for TXT)
+        """
+        full_path = os.path.join(path, f"{filename}.{extension}")
+        
+        with open(full_path, 'w', encoding='utf-8') as f:
+            if extension.lower() == 'json':
+                json.dump(content, f, ensure_ascii=False, indent=4)
+            elif extension.lower() == 'txt':
+                f.write(content)
+            else:
+                raise ValueError("Unsupported file extension. Use 'json' or 'txt'")
+
+    @staticmethod
+    def read_file(path, filename, extension):
+        """
+        Reads content from a file.
+        
+        Args:
+            path (str): Directory path
+            filename (str): Name of the file without extension
+            extension (str): File extension ('json' or 'txt')
+            
+        Returns:
+            Any: File content (dict/list for JSON, str for TXT)
+        """
+        full_path = os.path.join(path, f"{filename}.{extension}")
+        
+        with open(full_path, 'r', encoding='utf-8') as f:
+            if extension.lower() == 'json':
+                return json.load(f)
+            else:
+                return f.read()
+
+    @staticmethod 
+    def save_and_read_file(path, filename, extension, content, read_after_save=True):
+        """
+        Saves content to a file and optionally reads it back.
+        
+        Args:
+            path (str): Directory path
+            filename (str): Name of the file without extension
+            extension (str): File extension ('json' or 'txt')
+            content (Any): Content to save (dict/list for JSON, str for TXT)
+            read_after_save (bool): Whether to read and return the file content after saving
+        
+        Returns:
+            Any: File content if read_after_save is True, None otherwise
+        """
+        GeneralUtils.save_file(path, filename, extension, content)
+        
+        if read_after_save:
+            return GeneralUtils.read_file(path, filename, extension)
+        
+        return None
