@@ -33,9 +33,9 @@ class AIDevs3Utils:
         return question_element.text.strip()
 
     def verify_results(
-        task, answer, endpoint=f"https://centrala.{domain}/report"
+        task, answer, endpoint=f"https://centrala.{domain}/report", operation_type="answer"
     ):
-        payload = {"task": task, "apikey": aidevs3_api_key, "answer": answer}
+        payload = {"task": task, "apikey": aidevs3_api_key, operation_type: answer}
         headers = {"Content-Type": "application/json"}
         response = requests.post(endpoint, headers=headers, json=payload)
         #        response.raise_for_status()
