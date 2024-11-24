@@ -18,7 +18,7 @@ openai_client.api_key = os.getenv("OPENAI_API_KEY")
 
 
 class AiApiUtils:
-    
+
     @staticmethod
     def categorization(user):
         system = (
@@ -78,7 +78,7 @@ class AiApiUtils:
             messages=messages,
             tools=tools,
             tool_choice="auto",
-            temperature=temperature
+            temperature=temperature,
         )
         result = []
         for tool_call in response.choices[0].message.tool_calls:
@@ -98,15 +98,15 @@ class AiApiUtils:
     @staticmethod
     def openai_transcriptions(
         file_input,
-        language="en", 
+        language="en",
         model="whisper-1",
         write_to_txt=False,
         target_file_name="transkrypcja",
-        temperature=0.05
+        temperature=0.05,
     ):
         """
         Transcribe audio from a local file or URL.
-        
+
         Args:
             file_input: Path to local audio file or URL to audio file
             language: Language code (e.g. "en")
@@ -115,7 +115,7 @@ class AiApiUtils:
             target_file_name: Name of output text file if write_to_txt is True
             temperature: Model temperature parameter
         """
-        if file_input.startswith(('http://', 'https://')):
+        if file_input.startswith(("http://", "https://")):
             # Download file from URL
             response = requests.get(file_input)
             audio_file = response.content
@@ -133,19 +133,21 @@ class AiApiUtils:
                 file=file_obj,
                 response_format="text",
                 language=language,
-                temperature=temperature
+                temperature=temperature,
             )
 
             if write_to_txt:
-                with open(f"{target_file_name}.txt", "w", encoding='utf-8') as f:
+                with open(
+                    f"{target_file_name}.txt", "w", encoding="utf-8"
+                ) as f:
                     f.write(result)
 
             return result
-            
+
         finally:
             file_obj.close()
             # Clean up temp file if it was created
-            if file_input.startswith(('http://', 'https://')):
+            if file_input.startswith(("http://", "https://")):
                 os.remove("temp_audio.mp3")
 
     @staticmethod
@@ -161,7 +163,7 @@ class AiApiUtils:
                 "content": "you are helpful assistant"
             },
             {
-                "role": "user", 
+                "role": "user",
                 "content": [
                     {
                         "type": "text",
@@ -182,8 +184,11 @@ class AiApiUtils:
             # Convert local image to base64
             with open(image_path, "rb") as image_file:
                 import base64
-                image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
-                
+
+                image_base64 = base64.b64encode(image_file.read()).decode(
+                    "utf-8"
+                )
+
                 # Replace/insert image content in message
                 for msg in message:
                     if msg["role"] == "user":
@@ -195,7 +200,10 @@ class AiApiUtils:
                                 }
 
         response = openai_client.chat.completions.create(
-            model="gpt-4o", messages=message, max_tokens=800, temperature=temperature
+            model="gpt-4o",
+            messages=message,
+            max_tokens=800,
+            temperature=temperature,
         )
         return response.choices[0].message.content
 
@@ -234,26 +242,26 @@ class AiApiUtils:
 
     @staticmethod
     def generate_image(
-        prompt, 
-        model="dall-e-3", 
-        size="1024x1024", 
-        quality="standard", 
+        prompt,
+        model="dall-e-3",
+        size="1024x1024",
+        quality="standard",
         save_image=True,
-        filename="image.jpg"
+        filename="image.jpg",
     ):
         """
         Generates an image using DALL-E 3 based on the provided prompt and saves it locally.
-        
+
         Args:
             prompt (str): The description of the image to generate
             model (str): The model to use (default: "dall-e-3")
             size (str): Image size - "1024x1024", "1792x1024", or "1024x1792" (default: "1024x1024")
             quality (str): "standard" or "hd" (default: "standard")
             filename (str): Name of the output file (default: "image.jpg")
-            
+
         Returns:
             str: Path to the saved image
-            
+
         Example:
             prompt = "A serene lake at sunset with mountains in the background"
             image_path = AiApiUtils.generate_image(
@@ -270,39 +278,41 @@ class AiApiUtils:
             quality=quality,
             n=1,
         )
-        
+
         # Get the image URL from the response
         image_url = response.data[0].url
         if save_image:
-        # Download and save the image
+            # Download and save the image
             image_response = requests.get(image_url)
             if image_response.status_code == 200:
-                with open(filename, 'wb') as f:
+                with open(filename, "wb") as f:
                     f.write(image_response.content)
                 return filename
             else:
-                raise Exception(f"Failed to download image: {image_response.status_code}")
+                raise Exception(
+                    f"Failed to download image: {image_response.status_code}"
+                )
         else:
             return image_url
-        
+
     @staticmethod
     def vertex_ai_video_analysis(video_path):
         """
         Analyzes video content using Google's Vertex AI Gemini model.
-        
+
         Args:
             video_path (str): Path to the video file to analyze
-            
+
         Returns:
             str: Generated description/analysis of the video content
-            
+
         Example:
             # Analyze a local video file
             video_analysis = AiApiUtils.vertex_ai_video_analysis(
                 video_path="2024-10-31 07-48-45.mkv"
             )
             print(video_analysis)  # Prints the AI-generated analysis of the video
-        
+
         Note:
             Requires VERTEX_PROJECT_ID in your .env file
             Supports common video formats including .mkv, .mp4, .avi
@@ -312,35 +322,38 @@ class AiApiUtils:
         PROJECT_ID = os.getenv("VERTEX_PROJECT_ID")
         vertexai.init(project=PROJECT_ID, location="us-central1")
         model = GenerativeModel("gemini-1.5-flash-002")
-        
+
         mime_type, _ = mimetypes.guess_type(video_path)
         if not mime_type:
             mime_type = "video/mp4"  # default to mp4 if can't determine
-            
+
         # Load the video file as a Part object
         with open(video_path, "rb") as video_file:
             video_data = video_file.read()
             video_part = Part.from_data(data=video_data, mime_type=mime_type)
-        
+
         # Create the prompt
-        prompt = "Please analyze this video and describe what's happening in it."
-        
+        prompt = (
+            "Please analyze this video and describe what's happening in it."
+        )
+
         # Generate content with both the prompt and video
         response = model.generate_content(
             [prompt, video_part],
             generation_config={
                 "max_output_tokens": 2048,
                 "temperature": 0.4,
-            }
+            },
         )
-        
+
         return response.text
+
     @staticmethod
     def ollama_list_local_models():
         url = "http://localhost:11434/api/tags"
         response = requests.get(url)
         return response.json()
-    
+
     @staticmethod
     def ollama_call_model(model, prompt):
         """
@@ -368,21 +381,23 @@ class AiApiUtils:
         url = f"http://localhost:11434/api/generate"
         response = requests.post(url, json={"model": model, "prompt": prompt})
         return response.json()["response"]
-    
+
     @staticmethod
-    def structured_openai_completion(system, user, model="gpt-4o-2024-08-06", response_schema=None):
+    def structured_openai_completion(
+        system, user, model="gpt-4o-2024-08-06", response_schema=None
+    ):
         """
         Get a structured JSON response from OpenAI based on a provided schema.
-        
+
         Args:
             system (str): System message/instructions
             user (str): User input/query
             response_schema (dict): JSON schema that defines the expected response structure
             model (str): OpenAI model to use (default: gpt-3.5-turbo-1106)
-            
+
         Returns:
             dict: Structured response matching the provided schema
-            
+
         Example:
             schema = {
                 "type": "object",
@@ -404,7 +419,7 @@ class AiApiUtils:
                 model=model,
                 messages=[
                     {"role": "system", "content": system},
-                    {"role": "user", "content": user}
+                    {"role": "user", "content": user},
                 ],
                 response_format=response_schema,
             )
@@ -413,9 +428,75 @@ class AiApiUtils:
                 model=model,
                 messages=[
                     {"role": "system", "content": system},
-                    {"role": "user", "content": user}
+                    {"role": "user", "content": user},
                 ],
                 response_format=response_schema,
             )
-        
+
         return json.loads(response.choices[0].message.content)
+
+    @staticmethod
+    def structured_openai_completion_with_tools(
+        user=None,
+        tools=None,
+        model="gpt-4o-2024-08-06",
+        response_schema=None,
+        previous_messages=None,
+        system=None,
+    ):
+        """
+        Get a structured JSON response from OpenAI based on a provided schema,
+        while also allowing the use of tools and maintaining message history.
+
+        Args:
+            user (str): User input/query
+            tools (list): List of tools to be used in the completion
+            model (str): OpenAI model to use (default: gpt-4o-2024-08-06)
+            response_schema (dict): JSON schema that defines the expected response structure
+            previous_messages (list): List of previous messages to maintain history
+            include_system_message (bool): Whether to include the system message
+            system (str): System message/instructions (optional)
+
+        Returns:
+            dict: Structured response matching the provided schema
+        """
+        messages = []
+
+        if system:
+            messages.append({"role": "system", "content": system})
+
+        if previous_messages:
+            messages = previous_messages + messages
+
+        if user:
+            messages.append({"role": "user", "content": user})
+
+        # Call OpenAI with tools
+        if tools:
+            if response_schema:
+                response = openai_client.beta.chat.completions.parse(
+                    model=model,
+                    messages=messages,
+                    tools=tools,
+                    response_format=response_schema,
+                )
+            else:
+                response = openai_client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    tools=tools,
+                )
+        else:
+            if response_schema:
+                response = openai_client.beta.chat.completions.parse(
+                    model=model,
+                    messages=messages,
+                    response_format=response_schema,
+                )
+            else:
+                response = openai_client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                )
+
+        return response

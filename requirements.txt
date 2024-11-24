@@ -1,7 +1,9 @@
 google-auth
 google-search-results==2.4.2
 msal==1.22.0
+neo4j
 openai==1.1.2
+py2neo
 python-dotenv==1.0.0
 qdrant-client==1.6.4
 requests==2.31.0

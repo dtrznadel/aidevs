@@ -1,0 +1,56 @@
+#setup neo4j - needs to be ready in docker
+from neo4j import GraphDatabase
+URI = "neo4j://localhost:7687"  # Replace with your Neo4j URI
+AUTH = ("neo4j", "neo4jneo4j")  # Replace with your credentials
+driver = GraphDatabase.driver(URI, auth=AUTH)
+driver.verify_connectivity()
+
+# create nodes
+with driver.session() as session:
+    for user in all_users["reply"]:
+        session.run(
+            f"CREATE (p{user['id']}:Person {{name: '{user['username']}', id: {user['id']}}})"
+        )
+# create edges
+with driver.session() as session:
+    for conection in all_connections["reply"]:
+        session.run(
+            f"""
+            MATCH (p1:Person {{id: {conection['user1_id']}}})
+            MATCH (p2:Person {{id: {conection['user2_id']}}})
+            MERGE (p1)-[:KNOWS]->(p2)"""
+        )
+# get shortest path
+query = """
+MATCH (start:Person {id: $id1}), (end:Person {id: $id2})
+MATCH p = shortestPath((start)-[*]-(end))
+RETURN p
+"""
+Path=""
+with driver.session() as session:
+    result = session.run(query, id1=28, id2=39)
+    for record in result.data()[0]["p"]:
+        if record!="KNOWS":
+            print(record)
+            Path = Path + record["name"] + ", "
+
+
+
+# other sample queries
+
+query = """
+MATCH (n)
+WHERE n.id = 95
+RETURN n, elementId(n) as nodeId
+"""
+
+query = """
+MATCH (n)
+RETURN n, elementId(n) as nodeId
+"""
+
+### cleanup
+query = """
+MATCH (n)
+DETACH DELETE n
+"""
