@@ -54,3 +54,5 @@ query = """
 MATCH (n)
 DETACH DELETE n
 """
+# close connection
+driver.close()

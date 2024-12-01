@@ -8,8 +8,7 @@ from pydantic import BaseModel
 from ai_config import TasksApiConfig
 import vertexai
 
-from vertexai.generative_models import GenerativeModel
-from vertexai.preview.generative_models import GenerativeModel, Part
+from vertexai.generative_models import GenerativeModel, Part
 import mimetypes
 
 load_dotenv()
@@ -343,6 +342,68 @@ class AiApiUtils:
             generation_config={
                 "max_output_tokens": 2048,
                 "temperature": 0.4,
+            },
+        )
+
+        return response.text
+
+    @staticmethod
+    def vertex_ai_image_analysis(image_path, user_prompt="", system_prompt=""):
+        """
+        Analyzes image content using Google's Vertex AI Gemini model.
+
+        Args:
+            image_path (str): Path to the image or PDF file to analyze
+            system_prompt (str): System message/instructions
+            user_prompt (str): User input/query
+
+        Returns:
+            str: Generated description/analysis of the image content
+
+        Example:
+            # Analyze a local image or PDF file
+            image_analysis = AiApiUtils.vertex_ai_image_analysis(
+                image_path="example.jpg",
+                system_prompt="You are an image analysis assistant.",
+                user_prompt="Describe the content of this image."
+            )
+            print(image_analysis)  # Prints the AI-generated analysis of the image
+
+        Note:
+            Requires VERTEX_PROJECT_ID in your .env file
+            Supports common image formats including .jpg, .png, and .pdf
+        """
+        # Get the MIME type of the file
+        PROJECT_ID = os.getenv("VERTEX_PROJECT_ID")
+        vertexai.init(project=PROJECT_ID, location="us-central1")
+        model = GenerativeModel("gemini-1.5-flash-002", system_instruction=system_prompt)
+
+        mime_type, _ = mimetypes.guess_type(image_path)
+        if not mime_type:
+            mime_type = "image/jpeg"  # default to jpeg if can't determine
+
+        # Convert PDF to image if necessary
+        if mime_type == "application/pdf":
+            from pdf2image import convert_from_path
+
+            images = convert_from_path(image_path)
+            image_data = images[0].tobytes()
+            mime_type = "image/jpeg"
+        else:
+            # Load the image file as a Part object
+            with open(image_path, "rb") as image_file:
+                image_data = image_file.read()
+
+        image_part = Part.from_data(data=image_data, mime_type=mime_type)
+
+        # Create the prompt
+
+        # Generate content with both the prompt and image
+        response = model.generate_content(
+            [image_part, user_prompt],
+            generation_config={
+                "max_output_tokens": 4096,
+                "temperature": 0.2,
             },
         )
 
